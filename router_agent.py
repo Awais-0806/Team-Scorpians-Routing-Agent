@@ -35,8 +35,9 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 
 import requests
-from fastapi import FastAPI
-from pydantic import BaseModel
+from collections import defaultdict
+from fastapi import FastAPI, Header, HTTPException, Request, Depends
+from pydantic import BaseModel, Field
 
 try:
     import tiktoken
@@ -61,6 +62,13 @@ CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
 SELF_CONSISTENCY_SAMPLES = int(os.getenv("SELF_CONSISTENCY_SAMPLES", "2"))
 REQUEST_TIMEOUT = 30
 MAX_RETRIES = 2
+
+# --- Security config ---
+# AGENT_API_KEY: leave blank during judging so judges can hit the endpoint
+# freely; set it in production to require `X-API-Key: <value>` on requests.
+AGENT_API_KEY = os.getenv("AGENT_API_KEY", "")
+RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "20"))
+MAX_QUERY_LENGTH = int(os.getenv("MAX_QUERY_LENGTH", "2000"))
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("router_agent")
@@ -241,9 +249,35 @@ def route_query(query: str) -> RouteResult:
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Team Scorpians - Hybrid Token-Efficient Routing Agent")
 
+# In-memory rate limiter: {client_ip: [timestamps of recent requests]}
+# Good enough for a hackathon demo on a single instance. For real production
+# scale, swap this for Redis-backed rate limiting.
+_request_log: dict[str, list[float]] = defaultdict(list)
+
+
+def check_rate_limit(request: Request) -> None:
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window_start = now - 60
+    _request_log[client_ip] = [t for t in _request_log[client_ip] if t > window_start]
+    if len(_request_log[client_ip]) >= RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Try again in a minute.")
+    _request_log[client_ip].append(now)
+
+
+def check_api_key(x_api_key: Optional[str] = Header(default=None)) -> None:
+    # If AGENT_API_KEY is unset, auth is disabled (useful during judging demos).
+    if AGENT_API_KEY and x_api_key != AGENT_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key header.")
+
+
+def security_checks(request: Request, x_api_key: Optional[str] = Header(default=None)) -> None:
+    check_rate_limit(request)
+    check_api_key(x_api_key)
+
 
 class QueryIn(BaseModel):
-    query: str
+    query: str = Field(..., min_length=1, max_length=MAX_QUERY_LENGTH)
 
 
 @app.get("/health")
@@ -251,10 +285,13 @@ def health():
     return {"status": "ok", "local_model": LOCAL_MODEL, "cloud_model": FIREWORKS_MODEL}
 
 
-@app.post("/route")
+@app.post("/route", dependencies=[Depends(security_checks)])
 def route(q: QueryIn):
     """Send a query through the local-first cascade and get back the answer
-    plus routing metadata (which model answered, confidence, tokens spent)."""
+    plus routing metadata (which model answered, confidence, tokens spent).
+
+    Protected by: rate limiting (per IP) and optional API key (X-API-Key header,
+    only enforced if AGENT_API_KEY env var is set)."""
     result = route_query(q.query)
     return asdict(result)
 
