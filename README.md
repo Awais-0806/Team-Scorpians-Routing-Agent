@@ -91,11 +91,8 @@ Every hackathon project has a story. This is ours.
 | Name | Role |
 |------|------|
 | **Muhammad Awais** | Team Captain / Backend / Documentation |
-| **Muhammad Ekremah** | AI / ML Engineer |
-| **Muhammad Eraj** | Data Science / Model Training |
-| **Alveena Haneef** | Frontend / UI / Documentation |
-| **Hina Munawar** | Frontend / UI |
-| **Mussavir Abbasi** | DevOps / Containerization |
+| **Muhammad Ekremah** | AI / ML / Engineer/ Data Science / Model Training |
+| **Mussavir Abbasi** | DevOps / Containerization/ Frontend / UI |
 
 ---
 
