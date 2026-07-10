@@ -1,276 +1,265 @@
+"""
+Team Scorpians — Hybrid Token-Efficient Routing Agent
+Streamlit UI for V2 (FastAPI + Ollama)
+"""
+
 import streamlit as st
 import requests
+import json
 import time
+import os
 
-# -------------------------------
-# 1. PAGE CONFIG
-# -------------------------------
+# Page Config
 st.set_page_config(
-    page_title="Team Scorpians | AI Router",
+    page_title="Team Scorpians - Hybrid Router V2",
     page_icon="🦂",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# -------------------------------
-# 2. CUSTOM 3D GLASSMORPHISM CSS
-# -------------------------------
+# Custom CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-
-    /* ---------- GLOBAL ---------- */
-    body {
-        font-family: 'Inter', sans-serif;
-        color: #E0E0E0;
-        background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0D1117 70%);
-        overflow-x: hidden;
-    }
-
-    /* ---------- BACKGROUND ANIMATION ---------- */
     .stApp {
-        background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0D1117 70%);
-        animation: bgPulse 8s infinite alternate;
+        background-color: #0D1117;
     }
-    @keyframes bgPulse {
-        0% { background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #0D1117 70%); }
-        100% { background: radial-gradient(circle at 50% 0%, #1c1c3a 0%, #0D1117 70%); }
-    }
-
-    /* ---------- GLASSMORPHISM CARD ---------- */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-                    0 0 0 1px rgba(237, 28, 36, 0.1) inset;
-        padding: 24px;
-        margin: 16px 0;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        perspective: 1000px;
-    }
-    .glass-card:hover {
-        transform: translateY(-4px) rotateX(1deg) rotateY(1deg);
-        box-shadow: 0 12px 40px rgba(237, 28, 36, 0.2),
-                    0 0 0 1px rgba(237, 28, 36, 0.3) inset;
-    }
-
-    /* ---------- 3D SCORPION LOGO ---------- */
-    .scorpion-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 150px;
-        margin-bottom: 20px;
-        perspective: 800px;
-    }
-    .scorpion-logo {
-        font-size: 100px;
-        filter: drop-shadow(0 0 30px rgba(237, 28, 36, 0.8));
-        animation: rotate3d 8s infinite linear, float 3s ease-in-out infinite;
-        transform-style: preserve-3d;
-        display: inline-block;
-    }
-    @keyframes rotate3d {
-        0% { transform: rotateY(0deg) rotateX(0deg); }
-        50% { transform: rotateY(180deg) rotateX(5deg); }
-        100% { transform: rotateY(360deg) rotateX(0deg); }
-    }
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-
-    /* ---------- CRYSTAL TEXT ---------- */
-    .crystal-title {
+    
+    .main-title {
+        color: #ED1C24;
+        font-size: 42px;
         font-weight: 700;
-        font-size: 3rem;
         text-align: center;
-        background: linear-gradient(135deg, #ED1C24, #FF6B6B);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: 0 0 30px rgba(237, 28, 36, 0.4);
-        animation: textGlow 2s infinite alternate;
+        font-family: 'Inter', sans-serif;
     }
-    @keyframes textGlow {
-        0% { text-shadow: 0 0 30px rgba(237, 28, 36, 0.4); }
-        100% { text-shadow: 0 0 50px rgba(237, 28, 36, 0.8); }
-    }
-    .crystal-subtitle {
-        font-size: 1.2rem;
-        color: #E0E0E0;
+    
+    .sub-title {
+        color: #FFFFFF;
+        font-size: 20px;
         text-align: center;
-        font-weight: 300;
-        letter-spacing: 2px;
-        opacity: 0.9;
+        font-family: 'Inter', sans-serif;
+        opacity: 0.8;
     }
-
-    /* ---------- CHAT BUBBLES ---------- */
+    
     .user-bubble {
-        background: linear-gradient(135deg, #ED1C24, #c8102e);
-        padding: 12px 20px;
-        border-radius: 20px 20px 4px 20px;
-        margin: 12px 0;
-        max-width: 75%;
-        margin-left: auto;
-        box-shadow: 0 4px 12px rgba(237, 28, 36, 0.3);
-        animation: slideInRight 0.3s ease;
-        color: white;
-        font-weight: 500;
+        background-color: #2D2D44;
+        color: #FFFFFF;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border-left: 4px solid #ED1C24;
+        margin: 8px 0;
+        font-family: 'Inter', sans-serif;
     }
+    
     .assistant-bubble {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 12px 20px;
-        border-radius: 20px 20px 20px 4px;
-        margin: 12px 0;
-        max-width: 75%;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        animation: slideInLeft 0.3s ease;
-        color: #E0E0E0;
-    }
-    @keyframes slideInRight {
-        from { transform: translateX(30px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideInLeft {
-        from { transform: translateX(-30px); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-
-    /* ---------- SIDEBAR ---------- */
-    [data-testid="stSidebar"] {
-        background: rgba(13, 17, 23, 0.7);
-        backdrop-filter: blur(30px);
-        border-right: 1px solid rgba(237, 28, 36, 0.2);
-    }
-    .sidebar-metric {
-        text-align: center;
-        padding: 16px;
+        background-color: #1A1A2E;
+        color: #FFFFFF;
+        padding: 12px 16px;
         border-radius: 12px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        margin-bottom: 12px;
+        border-left: 4px solid #00C853;
+        margin: 8px 0;
+        font-family: 'Inter', sans-serif;
     }
-
-    /* ---------- BENCHMARK TABLE ---------- */
-    .benchmark-table {
-        width: 100%;
-        border-collapse: collapse;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    
+    .metric-card {
+        background-color: #1A1A2E;
+        border: 1px solid #ED1C24;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 4px 0;
+        color: #FFFFFF;
     }
-    .benchmark-table th {
-        background: rgba(237, 28, 36, 0.2);
-        color: #fff;
+    
+    .metric-label {
+        color: #AAAAAA;
+        font-size: 12px;
+        font-weight: 400;
+    }
+    
+    .metric-value {
+        color: #FFFFFF;
+        font-size: 18px;
+        font-weight: 700;
+    }
+    
+    .metric-value.local {
+        color: #00C853;
+    }
+    
+    .metric-value.cloud {
+        color: #ED1C24;
+    }
+    
+    .stTextInput input {
+        background-color: #1A1A2E;
+        border: 1px solid #ED1C24;
+        border-radius: 8px;
         padding: 12px;
-        font-weight: 600;
+        color: #FFFFFF;
+        font-size: 16px;
     }
-    .benchmark-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        color: #E0E0E0;
+    
+    .stButton button {
+        background-color: #ED1C24;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 24px;
+        font-weight: 600;
+        font-size: 16px;
+    }
+    
+    .stButton button:hover {
+        background-color: #FF3B3B;
+        color: #FFFFFF;
+    }
+    
+    hr {
+        border-color: #2D2D44;
+        margin: 20px 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# 3. SCORPION 3D LOGO + HEADER
-# -------------------------------
-st.markdown('<div class="scorpion-container"><span class="scorpion-logo">🦂</span></div>', unsafe_allow_html=True)
-st.markdown('<h1 class="crystal-title">Team Scorpians</h1>', unsafe_allow_html=True)
-st.markdown('<p class="crystal-subtitle">HYBRID TOKEN‑EFFICIENT ROUTING AGENT</p>', unsafe_allow_html=True)
-
-# -------------------------------
-# 4. SIDEBAR CONFIGURATION
-# -------------------------------
-with st.sidebar:
-    st.markdown("## ⚙️ Configuration")
-    backend_url = st.text_input("Backend URL", value="http://localhost:8081")
-    api_key = st.text_input("API Key", value="myHackathonKey2026", type="password")
+# Header
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown('<p class="main-title">🦂 Team Scorpians</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title">Hybrid Token-Efficient Routing Agent V2</p>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align:center; color:#AAAAAA; font-size:14px;">Powered by Ollama + Fireworks AI</p>', unsafe_allow_html=True)
     st.markdown("---")
+
+# API Configuration
+API_URL = st.text_input(
+    "Agent API URL",
+    value="http://localhost:8080/chat",
+    help="The URL where your FastAPI agent is running"
+)
+
+API_KEY = st.text_input(
+    "API Key",
+    value="myHackathonKey2026",
+    type="password",
+    help="API key for authentication"
+)
+
+# Session State
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hello! 👋 I'm your AI router. Ask me anything, and I'll use the cheapest model that can answer accurately."}
+    ]
+
+if "total_queries" not in st.session_state:
+    st.session_state.total_queries = 0
+
+# Sidebar
+with st.sidebar:
     st.markdown("### 📊 Live Stats")
-    st.markdown('<div class="sidebar-metric">⚡ Queries: 0</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-metric">🟢 Local: 0</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-metric">🔴 Cloud: 0</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-metric">💰 Tokens saved: 0</div>', unsafe_allow_html=True)
-
-# -------------------------------
-# 5. MAIN TABS
-# -------------------------------
-tab1, tab2, tab3 = st.tabs(["💬 Chat", "📊 Benchmark", "ℹ️ About"])
-
-# ---------- CHAT TAB ----------
-with tab1:
-    st.markdown("### 💬 Ask the Hybrid Agent")
-    query = st.text_input("Enter your query:", placeholder="e.g., What is the capital of Pakistan?")
-
-    if st.button("🚀 Route Query", type="primary"):
-        if query.strip():
-            with st.spinner("🧠 Routing your query..."):
-                try:
-                    resp = requests.post(
-                        f"{backend_url}/chat",
-                        json={"query": query.strip(), "api_key": api_key},
-                        timeout=30
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        # Display assistant bubble
-                        with st.container():
-                            st.markdown(f'<div class="user-bubble">{query}</div>', unsafe_allow_html=True)
-                            if data.get("source") == "local":
-                                st.markdown(f'<div class="assistant-bubble">🟢 <strong>Local (FREE)</strong><br>{data["answer"]}</div>', unsafe_allow_html=True)
-                            else:
-                                st.markdown(f'<div class="assistant-bubble">🔴 <strong>Cloud (paid)</strong><br>{data["answer"]}</div>', unsafe_allow_html=True)
-                            # Metrics
-                            col1, col2, col3 = st.columns(3)
-                            col1.metric("Confidence", f"{data.get('confidence', 0):.2f}")
-                            col2.metric("Latency", f"{data.get('latency_ms', 0):.0f} ms")
-                            col3.metric("Source", data.get("source", "unknown"))
-                    else:
-                        st.error(f"Error {resp.status_code}: {resp.text}")
-                except Exception as e:
-                    st.error(f"Connection failed: {e}")
-
-# ---------- BENCHMARK TAB ----------
-with tab2:
-    st.markdown("### 📊 Real-Time Benchmark")
-    st.markdown('<div class="glass-card">'
-                '<table class="benchmark-table">'
-                '<tr><th>Query</th><th>Difficulty</th><th>Escalated</th><th>Latency</th></tr>'
-                '<tr><td>What is 2+2?</td><td>Easy</td><td>No</td><td>3.2s</td></tr>'
-                '<tr><td>Derive merge sort</td><td>Hard</td><td>Yes</td><td>8.1s</td></tr>'
-                '</table></div>', unsafe_allow_html=True)
-
-    st.markdown("#### 📈 Token Savings")
-    st.markdown("80% of queries handled locally → **0 cloud tokens used**", unsafe_allow=True)
-
-# ---------- ABOUT TAB ----------
-with tab3:
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.metric("Total Queries", st.session_state.total_queries)
+    
+    st.markdown("---")
+    
+    st.markdown("### ⚙️ How It Works")
     st.markdown("""
-    ## 🦂 **Team Scorpians**
-    **AMD Hackathon ACT II - Track 1**
-
-    We built a **local-first AI routing agent** that saves up to 90% of cloud tokens.  
-    Using a tiny Gemma/Phi model on AMD ROCm, we only pay for cloud when absolutely necessary.
-
-    **Team:**  
-    - **Awais Jabbar** – Captain, Backend, UI/UX  
-    - **Muhammad Ekremah** – AI/ML Engineer, API Integration  
-
-    **Tech:** FastAPI · Ollama · Streamlit · AMD ROCm · Fireworks AI  
+    1. Query goes to **Local Gemma 3 4B** (Ollama)
+    2. Asked **TWICE** (Self-Consistency)
+    3. **Confidence Check**:
+       - ✅ **Match** → Local Answer (FREE!)
+       - ❌ **Differ** → Escalate to **Cloud** (Fireworks)
     """)
-    st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    st.markdown("### 🚀 Tech Stack")
+    st.markdown("""
+    - **Local Model:** Gemma 3 4B (Ollama)
+    - **Cloud Model:** Fireworks AI (Gemma 2/Phi)
+    - **Framework:** FastAPI + Ollama
+    - **Container:** Uvicorn
+    """)
 
-# -------------------------------
-# 6. FOOTER
-# -------------------------------
+# Chat Display
+for msg in st.session_state.messages:
+    if msg["role"] == "user":
+        st.markdown(f'<div class="user-bubble">🧑 <b>You:</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="assistant-bubble">🦂 <b>Agent:</b><br>{msg["content"]}</div>', unsafe_allow_html=True)
+
+# Input
+with st.container():
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        user_query = st.text_input(
+            "Type your question here...",
+            placeholder="e.g., What is the capital of Pakistan?",
+            key="query_input",
+            label_visibility="collapsed"
+        )
+    with col2:
+        submit = st.button("🚀 Ask", use_container_width=True)
+
+# Handle Submission
+if submit and user_query:
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    st.session_state.total_queries += 1
+    
+    with st.spinner("🧠 Thinking..."):
+        try:
+            response = requests.post(
+                API_URL,
+                json={"query": user_query, "api_key": API_KEY},
+                timeout=120
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                answer = data.get("answer", "No answer received.")
+                source = data.get("source", "unknown")
+                confidence = data.get("confidence", 0)
+                category = data.get("category", "general")
+                cached = data.get("cached", False)
+                request_id = data.get("request_id", "N/A")
+                latency_ms = data.get("latency_ms", 0)
+                
+                # Emoji for source
+                source_emoji = "🏠" if source == "local" else "☁️" if source == "cloud" else "⚠️"
+                
+                # Confidence color
+                conf_color = "#00C853" if confidence > 0.7 else "#FF6D00" if confidence > 0.4 else "#ED1C24"
+                
+                display_text = f"""
+**Answer:** {answer}
+
+---
+**📊 Routing Metadata:**
+- **Source:** {source_emoji} `{source}` {'✅ (FREE!)' if source == 'local' else '💰 (Cost applies)'}
+- **Confidence:** `{confidence:.2f}` {'✅' if confidence > 0.7 else '⚠️' if confidence > 0.4 else '❌'}
+- **Category:** `{category}`
+- **Cached:** `{'✅' if cached else '❌'}`
+- **Latency:** `{latency_ms:.0f} ms`
+- **Request ID:** `{request_id[:8]}...`
+                """
+                
+                st.session_state.messages.append({"role": "assistant", "content": display_text})
+                
+            elif response.status_code == 401:
+                st.session_state.messages.append({"role": "assistant", "content": f"❌ **Authentication Error:** Invalid API Key. Please check your API_KEY."})
+            elif response.status_code == 404:
+                st.session_state.messages.append({"role": "assistant", "content": f"❌ **Not Found:** The agent is not responding. Make sure `app.main` is running on `{API_URL}`"})
+            else:
+                st.session_state.messages.append({"role": "assistant", "content": f"❌ **Error:** {response.status_code} - {response.text[:200]}"})
+                
+        except requests.exceptions.ConnectionError:
+            st.session_state.messages.append({"role": "assistant", "content": f"❌ **Connection Error:** Cannot reach the agent at `{API_URL}`\n\nMake sure `uvicorn app.main:app` is running."})
+        except Exception as e:
+            st.session_state.messages.append({"role": "assistant", "content": f"❌ **Unexpected Error:** {str(e)}"})
+    
+    st.rerun()
+
+# Footer
 st.markdown("---")
-st.caption("© 2026 Team Scorpians | Built for AMD Hackathon ACT II")
+st.markdown(
+    '<p style="text-align:center; color:#555555; font-size:12px;">'
+    '🦂 Team Scorpians | Code. Collaborate. Conquer. | AMD Developer Hackathon: ACT II'
+    '</p>',
+    unsafe_allow_html=True
+)

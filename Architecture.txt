@@ -1,0 +1,3 @@
+User Query → [Cache] → [Classifier] → [Local LLM (×3)] → [Confidence Scorer]
+                                                              ↓
+                                          Confidence < threshold → Cloud LLM (Fireworks)
