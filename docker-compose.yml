@@ -1,0 +1,10 @@
+services:
+  agent:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - API_KEY=myHackathonKey2026
+      - LOCAL_LLM_URL=http://host.docker.internal:11434/api/generate
+    volumes:
+      - .:/app

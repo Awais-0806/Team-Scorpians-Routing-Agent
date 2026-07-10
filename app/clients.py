@@ -1,6 +1,7 @@
 """Async HTTP clients for local and cloud LLM endpoints."""
 import httpx
 import socket
+import torch
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from app.config import get_settings
 from app.logger import log
@@ -14,9 +15,19 @@ class LocalLLMClient:
             timeout=settings.local_llm_timeout,
             headers={"Authorization": f"Bearer {settings.local_llm_api_key}"} if settings.local_llm_api_key else {}
         )
-        # Direct hardcoded URL - bypasses config issues
         self.base_url = "http://localhost:11434/api/generate"
-        self.model_name = "phi3:mini"
+        
+        # GPU Detection
+        self.use_gpu = torch.cuda.is_available()
+        if self.use_gpu:
+            self.model_name = "gemma3:4b"  # Better model on GPU
+            self.max_tokens = 512
+            log.info(f"✅ Using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            self.model_name = "phi3:mini"  # Lighter model on CPU
+            self.max_tokens = 256
+            log.info("⚠️ Using CPU (fallback mode)")
+        
         log.info(f"LocalLLMClient initialized with URL: {self.base_url}, model: {self.model_name}")
 
     def _check_ollama_available(self) -> bool:
@@ -35,11 +46,14 @@ class LocalLLMClient:
         wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
         retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
     )
-    async def generate(self, prompt: str, max_tokens: int = 128) -> str:
+    async def generate(self, prompt: str, max_tokens: int = None) -> str:
         """Send prompt to local Ollama endpoint."""
         if not self._check_ollama_available():
             log.error("Ollama server is not running! Start it with 'ollama serve'")
             raise ConnectionError("Ollama server not running")
+
+        if max_tokens is None:
+            max_tokens = self.max_tokens
 
         payload = {
             "model": self.model_name,
@@ -87,14 +101,15 @@ class FireworksClient:
         )
         self.api_url = settings.fireworks_api_url
         self.model = settings.fireworks_model
+        self.use_gpu = torch.cuda.is_available()
         log.info(f"FireworksClient initialized with URL: {self.api_url}, model: {self.model}")
 
     @retry(
-        stop=stop_after_attempt(2),
+        stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=0.5, min=0.1, max=2),
         retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
     )
-    async def generate(self, messages: list[dict], max_tokens: int = 128) -> str:
+    async def generate(self, messages: list[dict], max_tokens: int = 512) -> str:
         """Send messages to Fireworks AI cloud endpoint."""
         if not settings.fireworks_api_key:
             log.warning("Fireworks API key not set. Cloud fallback disabled.")
@@ -121,7 +136,7 @@ class FireworksClient:
             error_body = e.response.text[:300] if e.response else "No response body"
             log.error(f"Fireworks HTTP error: {e.response.status_code} - {error_body}")
             if e.response.status_code == 404:
-                raise Exception(f"Fireworks model '{self.model}' not found (404). Please check model ID.")
+                raise Exception(f"Fireworks model '{self.model}' not found (404). Please deploy the model first.")
             elif e.response.status_code == 401:
                 raise Exception(f"Fireworks API key invalid (401). Please check your API key.")
             raise

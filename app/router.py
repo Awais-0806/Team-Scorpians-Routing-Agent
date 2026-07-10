@@ -76,7 +76,17 @@ class HybridRouter:
         conf = 0.0
         valid_responses = []
         
-        print(f"[ROUTER DEBUG] Starting local inference with {settings.self_consistency_samples} samples")
+        # ============================================================
+        # GPU OPTIMIZATION: Use more samples on GPU
+        # ============================================================
+        samples = settings.self_consistency_samples
+        if settings.use_gpu:
+            samples = max(samples, 3)  # 3 samples on GPU for better accuracy
+            print(f"[ROUTER DEBUG] GPU mode: using {samples} samples")
+        else:
+            print(f"[ROUTER DEBUG] CPU mode: using {samples} samples")
+        
+        print(f"[ROUTER DEBUG] Starting local inference with {samples} samples")
         
         try:
             prompt = build_local_prompt(query)
@@ -84,7 +94,7 @@ class HybridRouter:
             
             tasks = [
                 self.local.generate(prompt)
-                for _ in range(settings.self_consistency_samples)
+                for _ in range(samples)
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
