@@ -1,0 +1,42 @@
+[
+    {
+        "task_id": "practice-01",
+        "prompt": "What is the capital of France and what is its most famous landmark?"
+    },
+    {
+        "task_id": "practice-02",
+        "prompt": "A store has 150 items. It sells 20% on Monday and 30 more on Tuesday. How many items remain?"
+    },
+    {
+        "task_id": "practice-03",
+        "prompt": "Classify the sentiment of this review: 'The food was amazing, but the service was extremely slow and rude.'"
+    },
+    {
+        "task_id": "practice-04",
+        "prompt": "Summarize the following in exactly one sentence: 'Artificial intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems. These processes include learning, reasoning, and self-correction. Particular applications of AI include expert systems, speech recognition, and machine vision.'"
+    },
+    {
+        "task_id": "practice-05",
+        "prompt": "Extract all named entities and their types (Person, Organization, Location, Date) from: 'Elon Musk announced on July 15, 2026, that SpaceX will open a new facility in Austin, Texas.'"
+    },
+    {
+        "task_id": "practice-06",
+        "prompt": "This function is supposed to return the maximum value from a list. def get_max(nums): return nums[0]. Find the bug and provide the corrected implementation."
+    },
+    {
+        "task_id": "practice-07",
+        "prompt": "Four friends, Alex, Ben, Chris, and Dana, each have a different favorite color: Red, Blue, Green, Yellow. Alex doesn't like Blue. Ben likes Green. Chris doesn't like Red or Yellow. Dana likes Blue. What color does each person like?"
+    },
+    {
+        "task_id": "practice-08",
+        "prompt": "Write a Python function named 'remove_duplicates' that takes a list of integers and returns a list with duplicates removed, preserving the original order."
+    },
+    {
+        "task_id": "practice-09",
+        "prompt": "Explain the theory of relativity in simple terms for a 10-year-old."
+    },
+    {
+        "task_id": "practice-10",
+        "prompt": "A rectangle has a length of 12 cm and a width of 5 cm. Calculate its perimeter and area."
+    }
+]
