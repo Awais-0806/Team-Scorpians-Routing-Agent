@@ -15,7 +15,7 @@ class LocalLLMClient:
             headers={"Authorization": f"Bearer {settings.local_llm_api_key}"} if settings.local_llm_api_key else {}
         )
         self.base_url = settings.local_llm_url
-        self.model_name = "gemma3:1b"  # Fastest
+        self.model_name = "gemma3:4b"  # Fastest
         log.info(f"LocalLLMClient initialized with URL: {self.base_url}, model: {self.model_name}")
 
     def _check_ollama_available(self) -> bool:

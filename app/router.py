@@ -50,6 +50,7 @@ class HybridRouter:
                     "category": QueryCategory.general,
                     "cached": True,
                     "latency_ms": latency,
+                    "tokens_saved": 150,   # full savings on cached response
                     "request_id": request_id,
                 }
         except Exception:
@@ -73,18 +74,19 @@ class HybridRouter:
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
             valid_responses = [r for r in results if isinstance(r, str)]
-            if valid_responses:
+            if len(valid_responses) >= 2:
                 local_success = True
         except Exception as e:
             log.warning("Local inference failed", error=str(e))
 
-        # 4. Confidence scoring (if we got local responses)
-        if local_success:
+        # 4. Confidence scoring (if we have at least two valid responses)
+        if local_success and len(valid_responses) >= 2:
             try:
-                conf = self.scorer.confidence(valid_responses)
+                # Use semantic similarity between first two responses
+                conf = self.scorer.score(valid_responses[0], valid_responses[1])
                 log.info("Local confidence", request_id=request_id, confidence=conf)
-                # Reflection
-                if settings.enable_reflection:
+                # Optional reflection: skip for simplicity or keep if scorer has the method
+                if settings.enable_reflection and hasattr(self.scorer, 'reflection_confidence'):
                     reflection_conf = self.scorer.reflection_confidence(valid_responses[0], query)
                     conf = (conf + reflection_conf) / 2
                     log.info("Reflection confidence", request_id=request_id, confidence=reflection_conf)
@@ -114,6 +116,7 @@ class HybridRouter:
                 "category": category,
                 "cached": False,
                 "latency_ms": latency,
+                "tokens_saved": 150,      # estimated cloud tokens saved by using local
                 "request_id": request_id,
             }
 
@@ -127,9 +130,10 @@ class HybridRouter:
             metrics_collector.record_cloud()
             return answer, {
                 **cloud_meta,
-                "confidence": conf,
+                "confidence": conf,      # keep local confidence even if cloud was used
                 "category": category,
                 "cached": False,
+                "tokens_saved": 0,       # no savings when cloud is used
             }
         except Exception as e:
             log.error("Cloud fallback failed", error=str(e), request_id=request_id)
@@ -140,6 +144,7 @@ class HybridRouter:
                 "category": category,
                 "cached": False,
                 "latency_ms": (time.monotonic() - start) * 1000,
+                "tokens_saved": 0,
                 "request_id": request_id,
             }
 
@@ -154,5 +159,6 @@ class HybridRouter:
             "category": QueryCategory.general,
             "cached": False,
             "latency_ms": latency,
+            "tokens_saved": 0,
             "request_id": request_id,
         }
