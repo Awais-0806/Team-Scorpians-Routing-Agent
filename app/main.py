@@ -2,7 +2,7 @@
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.config import get_settings
@@ -16,6 +16,16 @@ from app.cache import CacheManager
 from app.metrics import metrics_collector
 from app.security import limiter, verify_api_key, detect_injection
 
+# ============================================================
+# PROMETHEUS METRICS
+# ============================================================
+try:
+    from prometheus_client import Counter, Histogram, generate_latest, REGISTRY
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+    print("⚠️ prometheus-client not installed. Metrics disabled.")
+
 settings = get_settings()
 
 # Global components
@@ -25,6 +35,11 @@ cache = CacheManager()
 scorer = ConfidenceScorer()
 classifier: QueryClassifier = None
 router: HybridRouter = None
+
+# Prometheus metrics (if available)
+if PROMETHEUS_AVAILABLE:
+    REQUESTS = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])
+    LATENCY = Histogram('http_request_duration_seconds', 'HTTP request latency', ['method', 'endpoint'])
 
 
 @asynccontextmanager
@@ -61,6 +76,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+# ============================================================
+# MIDDLEWARE: Request Logging + Prometheus Metrics
+# ============================================================
 @app.middleware("http")
 async def add_request_id_and_logging(request: Request, call_next):
     start = time.time()
@@ -73,12 +91,29 @@ async def add_request_id_and_logging(request: Request, call_next):
         latency_ms=latency,
         status_code=response.status_code,
     )
+    
     # Store latency in metrics if /chat
     if request.url.path == "/chat" and response.status_code == 200:
         metrics_collector.record_latency(latency)
+    
+    # Prometheus metrics
+    if PROMETHEUS_AVAILABLE:
+        REQUESTS.labels(
+            method=request.method,
+            endpoint=request.url.path,
+            status=response.status_code
+        ).inc()
+        LATENCY.labels(
+            method=request.method,
+            endpoint=request.url.path
+        ).observe(latency / 1000)  # Convert to seconds
+    
     return response
 
 
+# ============================================================
+# ENDPOINTS
+# ============================================================
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit(settings.rate_limit)
 async def chat(request: Request, payload: ChatRequest):
@@ -141,4 +176,29 @@ async def metrics():
         cache_hits=metrics_collector.cache_hits,
         avg_latency_ms=metrics_collector.avg_latency_ms,
         estimated_cost_saved_usd=metrics_collector.estimated_cost_saved_usd,
+    )
+
+
+# ============================================================
+# PROMETHEUS METRICS ENDPOINT
+# ============================================================
+@app.get("/prometheus")
+async def prometheus_metrics():
+    """Prometheus metrics endpoint for monitoring."""
+    if not PROMETHEUS_AVAILABLE:
+        return Response("prometheus-client not installed", media_type="text/plain", status_code=503)
+    return Response(generate_latest(REGISTRY), media_type="text/plain")
+
+
+# ============================================================
+# HTTPS SUPPORT (Direct Run)
+# ============================================================
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=443,
+        ssl_keyfile="./key.pem",
+        ssl_certfile="./cert.pem"
     )
