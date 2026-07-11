@@ -1,42 +1,45 @@
 [
+   
     {
-        "task_id": "practice-01",
-        "prompt": "What is the capital of France and what is its most famous landmark?"
+        "task_id": "demo-01",
+        "prompt": "capital of pakistan"
     },
     {
-        "task_id": "practice-02",
-        "prompt": "A store has 150 items. It sells 20% on Monday and 30 more on Tuesday. How many items remain?"
+        "task_id": "demo-02",
+        "prompt": "A store has 240 items. It sells 15% on Monday and 60 more on Tuesday. How many items remain?"
     },
     {
-        "task_id": "practice-03",
-        "prompt": "Classify the sentiment of this review: 'The food was amazing, but the service was extremely slow and rude.'"
+        "task_id": "demo-03",
+        "prompt": "Calculate area of rectangle with length 12 and width 5"
     },
     {
-        "task_id": "practice-04",
-        "prompt": "Summarize the following in exactly one sentence: 'Artificial intelligence (AI) is the simulation of human intelligence processes by machines, especially computer systems. These processes include learning, reasoning, and self-correction. Particular applications of AI include expert systems, speech recognition, and machine vision.'"
+        "task_id": "demo-04",
+        "prompt": "Classify sentiment: The food was amazing but service was rude."
     },
     {
-        "task_id": "practice-05",
-        "prompt": "Extract all named entities and their types (Person, Organization, Location, Date) from: 'Elon Musk announced on July 15, 2026, that SpaceX will open a new facility in Austin, Texas.'"
+        "task_id": "demo-05",
+        "prompt": "Extract entities: Elon Musk founded SpaceX in California in 2002."
     },
     {
-        "task_id": "practice-06",
-        "prompt": "This function is supposed to return the maximum value from a list. def get_max(nums): return nums[0]. Find the bug and provide the corrected implementation."
+    
+      "task_id": "demo-06",
+        "prompt": "what is the capital of france"
     },
     {
-        "task_id": "practice-07",
-        "prompt": "Four friends, Alex, Ben, Chris, and Dana, each have a different favorite color: Red, Blue, Green, Yellow. Alex doesn't like Blue. Ben likes Green. Chris doesn't like Red or Yellow. Dana likes Blue. What color does each person like?"
+
+    "task_id": "demo-07",
+        "prompt": "Fix this bug: def get_max(nums): return nums[0]"
     },
     {
-        "task_id": "practice-08",
-        "prompt": "Write a Python function named 'remove_duplicates' that takes a list of integers and returns a list with duplicates removed, preserving the original order."
+        "task_id": "demo-08",
+        "prompt": "Sam, Jo, Lee own cat, dog, bird. Sam does not own bird. Jo owns dog. Who owns cat?"
     },
     {
-        "task_id": "practice-09",
-        "prompt": "Explain the theory of relativity in simple terms for a 10-year-old."
+        "task_id": "demo-09",
+        "prompt": "Summarize: AI is simulation of human intelligence."
     },
     {
-        "task_id": "practice-10",
-        "prompt": "A rectangle has a length of 12 cm and a width of 5 cm. Calculate its perimeter and area."
+        "task_id": "demo-10",
+        "prompt": "Write Python function to remove duplicates from list."
     }
 ]
