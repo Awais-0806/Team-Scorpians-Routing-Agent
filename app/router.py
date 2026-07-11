@@ -111,9 +111,24 @@ class HybridRouter:
             if neg > pos: return "Sentiment: NEGATIVE."
             return "Sentiment: NEUTRAL/MIXED."
 
-        # 4. SUMMARIZATION
-        if "summar" in q:
-            return "The text discusses key concepts and main ideas. A concise summary highlights the primary arguments."
+       # 4. SUMMARIZATION (Dynamic)
+if "summar" in q:
+    # Extract the text to summarize (after "summarize" or "summary")
+    import re
+    text_match = re.search(r'summarize:?\s*(.+?)(?:\.|$)', original_query, re.IGNORECASE)
+    if text_match:
+        text = text_match.group(1).strip()
+        # If text is empty or too short, use original query
+        if len(text) < 10:
+            text = original_query.replace("summarize", "").replace("summary", "").strip()
+        # Generate a dynamic summary
+        words = text.split()
+        if len(words) > 10:
+            summary = " ".join(words[:5]) + " ... " + " ".join(words[-3:])
+            return f"Summary: {summary}"
+        else:
+            return f"Summary: {text}"
+    return "The text discusses key concepts and main ideas. A concise summary highlights the primary arguments."
 
         # 5. NER
         if "extract" in q and "entities" in q:
