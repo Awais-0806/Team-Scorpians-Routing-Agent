@@ -8,17 +8,21 @@ import sys
 import asyncio
 import time
 from pathlib import Path
+from dotenv import load_dotenv
+
+# ===== LOAD .env FILE =====
+load_dotenv()
+print("✅ .env loaded!")
 
 # Ensure project root is in path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.router import HybridRouter  # No settings import needed
+from app.router import HybridRouter
 
 async def main():
     # 1. Read input
     input_path = Path("/input/tasks.json")
     if not input_path.exists():
-        # Fallback for local testing: check current dir
         local_input = Path("tasks.json")
         if local_input.exists():
             input_path = local_input
@@ -29,7 +33,7 @@ async def main():
     with open(input_path, "r", encoding="utf-8") as f:
         tasks = json.load(f)
     
-    # 2. Initialize Router (pure mock, no external deps)
+    # 2. Initialize Router
     router = HybridRouter()
     results = []
     
@@ -41,9 +45,7 @@ async def main():
         start = time.time()
         
         try:
-            # Route the query
             answer, meta = await router.route(prompt)
-            # Ensure answer is string
             if isinstance(answer, dict):
                 answer = json.dumps(answer)
         except Exception as e:
@@ -54,7 +56,6 @@ async def main():
             "answer": answer
         })
     
-    # 3. Write output
     output_path = Path("/output/results.json")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
