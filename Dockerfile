@@ -1,6 +1,11 @@
 FROM python:3.10-slim
 
-RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
+# OpenMP aur required libraries install karo
+RUN apt-get update && apt-get install -y \
+    wget \
+    libgomp1 \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -16,7 +21,6 @@ RUN pip install --no-cache-dir \
     --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
     llama-cpp-python==0.2.79
 
-# Model COPY karo (download nahi)
 RUN mkdir -p /app/model
 COPY model.gguf /app/model/model.gguf
 
